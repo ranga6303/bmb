@@ -1,8 +1,8 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.CustomException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -23,13 +23,11 @@ public class SmtpEmailService implements EmailService {
     }
 
     @Override
-    @Async
     public void sendPasswordResetOtp(String to, String otp) {
         send(to, "Your password reset OTP", "Your password reset OTP is: " + otp + ". It expires in 15 minutes.");
     }
 
     @Override
-    @Async
     public void sendOtpEmail(String to, String otp) {
         send(to, "Your registration OTP", "Your OTP is: " + otp + ". It expires in 10 minutes.");
     }
@@ -43,8 +41,10 @@ public class SmtpEmailService implements EmailService {
         message.setText(body);
         try {
             mailSender.send(message);
+            logger.info("Email accepted by SMTP server to={} subject={}", to, subject);
         } catch (Exception e) {
             logger.error("Failed to send email to {}", to, e);
+            throw new CustomException("Failed to send email. Please try again later.", e);
         }
     }
 }
