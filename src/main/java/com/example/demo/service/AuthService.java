@@ -53,6 +53,7 @@ public class AuthService {
     private final AuditLogRepository auditLogRepository;
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -69,7 +70,8 @@ public class AuthService {
         UserSessionRepository userSessionRepository,
         AuditLogRepository auditLogRepository,
         StudentRepository studentRepository,
-        TeacherRepository teacherRepository
+        TeacherRepository teacherRepository,
+        org.springframework.transaction.PlatformTransactionManager transactionManager
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -83,6 +85,7 @@ public class AuthService {
         this.auditLogRepository = auditLogRepository;
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
+        this.transactionManager = transactionManager;
     }
 
     @Transactional
@@ -238,7 +241,8 @@ public class AuthService {
             throw new CustomException("Invalid username or password");
         }
 
-        resetFailed(user);
+        user.setFailedLoginAttempts(0);
+        user.setAccountLockedUntil(null);
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
@@ -271,7 +275,7 @@ public class AuthService {
             userSession.getDeviceId()
         );
 
-        persistAudit("LOGIN_SUCCESS", user, "User", user.getId(), "Login successful");
+        persistAuditAfterCommit("LOGIN_SUCCESS", user, "User", user.getId(), "Login successful");
         return new AuthResponse(jwt, rawRefresh);
     }
 
@@ -438,11 +442,7 @@ public class AuthService {
     }
 
     private void revokeAllSessions(User user) {
-        List<UserSession> sessions = userSessionRepository.findByUserAndRevokedFalse(user);
-        for (UserSession session : sessions) {
-            session.setRevoked(true);
-        }
-        userSessionRepository.saveAll(sessions);
+        userSessionRepository.revokeAllActiveByUserId(user.getId());
     }
 
     private void incrementFailed(User user) {
@@ -467,6 +467,31 @@ public class AuthService {
         log.setTargetId(targetId);
         log.setDetails(details);
         auditLogRepository.save(log);
+    }
+
+    private void persistAuditAfterCommit(String action, User actor, String entity, Long targetId, String details) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            persistAudit(action, actor, entity, targetId, details);
+            return;
+        }
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    persistAuditInNewTransaction(action, actor, entity, targetId, details);
+                }
+            }
+        );
+    }
+
+    private void persistAuditInNewTransaction(String action, User actor, String entity, Long targetId, String details) {
+        org.springframework.transaction.support.TransactionTemplate transactionTemplate =
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
+        transactionTemplate.executeWithoutResult(status -> persistAudit(action, actor, entity, targetId, details));
     }
 
     private String maskEmail(String email) {
