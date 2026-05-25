@@ -1,0 +1,37 @@
+
+>> Inserting 19 subjects ...
+   [OK]   Subjects: 19 rows
+
+>> Inserting 9 sections ...
+   [OK]   Sections: 27 rows
+
+>> Inserting 25 rooms ...
+   [OK]   Rooms: 25 rows
+
+>> Logging in as admin (Admin@123) ...
+   [OK]   Admin logged in
+
+>> Creating 35 teachers via admin API ...
+   [FAIL] TC001CSE45: status=403 | 
+   [FAIL] TC002CSE89: status=403 | 
+   [FAIL] TC003CSE12: status=403 | 
+   [FAIL] TC004CSE67: status=403 | 
+   [FAIL] TC005CSE34: status=403 | 
+   [FAIL] TC006CSE90: status=403 | 
+   [FAIL] TC007CSE23: status=403 | 
+   [FAIL] TC008CSE56: status=403 | 
+   [FAIL] TC009CSE78: status=403 | 
+   [FAIL] TC010CSE01: status=403 | 
+   [FAIL] TE001ECE45: status=403 | 
+   [FAIL] TE002ECE89: status=403 | 
+   [FAIL] TE003ECE12: status=403 | 
+   [FAIL] TE004ECE67: status=403 | 
+   [FAIL] TE005ECE34: status=403 | 
+   [FAIL] TE006ECE90: status=403 | 
+   [FAIL] TE007ECE23: status=403 | 
+   [FAIL] TE008ECE56: status=403 | 
+   [FAIL] TE009ECE78: status=403 | 
+   [FAIL] TE010ECE01: status=403 | 
+   [FAIL] TV001CIV45: status=403 | 
+   [FAIL] TV002CIV89: status=403 | 
+   [FAIL] TV003CIV12: status=403 | 
