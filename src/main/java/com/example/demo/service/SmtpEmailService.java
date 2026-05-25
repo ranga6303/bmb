@@ -2,29 +2,24 @@ package com.example.demo.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Service;
 
 
 public class SmtpEmailService implements EmailService {
     private static final Logger logger = LoggerFactory.getLogger(SmtpEmailService.class);
 
     private final JavaMailSender mailSender;
+    private final String mailHost;
+    private final String mailUsername;
+    private final String fromAddress;
 
-    @Value("${app.mail.from}")
-    private String fromAddress;
-
-    @Value("${spring.mail.host}")
-    private String mailHost;
-
-    @Value("${spring.mail.username}")
-    private String mailUsername;
-
-    public SmtpEmailService(JavaMailSender mailSender) {
+    public SmtpEmailService(JavaMailSender mailSender, String mailHost, String mailUsername, String fromAddress) {
         this.mailSender = mailSender;
+        this.mailHost = mailHost;
+        this.mailUsername = mailUsername;
+        this.fromAddress = fromAddress;
     }
 
     @Override
