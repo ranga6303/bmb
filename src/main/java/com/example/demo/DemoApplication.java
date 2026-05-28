@@ -11,11 +11,8 @@ public class DemoApplication {
 
 	public static void main(String[] args) {
 		Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-		setPropertyFromDotenvIfPresent(dotenv, "MAIL_HOST");
-		setPropertyFromDotenvIfPresent(dotenv, "MAIL_PORT");
-		setPropertyFromDotenvIfPresent(dotenv, "MAIL_USERNAME");
-		setPropertyFromDotenvIfPresent(dotenv, "MAIL_PASSWORD");
 		setPropertyFromDotenvIfPresent(dotenv, "MAIL_FROM");
+		setPropertyFromDotenvIfPresent(dotenv, "RESEND_API_KEY");
 		SpringApplication.run(DemoApplication.class, args);
 	}
 
