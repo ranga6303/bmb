@@ -35,6 +35,19 @@ public class GlobalExceptionHandler {
             .body(new ErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+        ServiceUnavailableException ex,
+        HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Service currently unavailable. Please try again later.",
+                request.getRequestURI()
+            ));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

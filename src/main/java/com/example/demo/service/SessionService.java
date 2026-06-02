@@ -26,6 +26,7 @@ import com.example.demo.repository.SessionRepository;
 import com.example.demo.repository.StudentRepository;
 import com.example.demo.repository.SubjectRepository;
 import com.example.demo.repository.TeacherRepository;
+import com.example.demo.repository.TeacherSectionSubjectRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +54,7 @@ public class SessionService {
     private final UserRepository userRepository;
     private final RoomService roomService;
     private final DeviceVerificationService deviceVerificationService;
+    private final TeacherSectionSubjectRepository teacherSectionSubjectRepository;
 
     public SessionService(
         TeacherRepository teacherRepository,
@@ -65,7 +67,8 @@ public class SessionService {
         AuditLogRepository auditLogRepository,
         UserRepository userRepository,
         RoomService roomService,
-        DeviceVerificationService deviceVerificationService
+        DeviceVerificationService deviceVerificationService,
+        TeacherSectionSubjectRepository teacherSectionSubjectRepository
     ) {
         this.teacherRepository = teacherRepository;
         this.subjectRepository = subjectRepository;
@@ -78,6 +81,7 @@ public class SessionService {
         this.userRepository = userRepository;
         this.roomService = roomService;
         this.deviceVerificationService = deviceVerificationService;
+        this.teacherSectionSubjectRepository = teacherSectionSubjectRepository;
     }
 
     @Transactional
@@ -94,13 +98,8 @@ public class SessionService {
         Section section = sectionRepository.findById(sectionId)
             .orElseThrow(() -> new CustomException("Section not found"));
 
-        if (!teacher.getMappedSubjects().contains(subject) || !teacher.getMappedSections().contains(section)) {
-            throw new CustomException("Teacher is not mapped to this subject/section");
-        }
-
-        // Validate subject is taught in this section
-        if (!subject.getMappedSections().contains(section)) {
-            throw new CustomException("Subject is not assigned to this section. Contact HOD to set up subject-section mapping.");
+        if (!teacherSectionSubjectRepository.existsByTeacherAndSectionAndSubject(teacher, section, subject)) {
+            throw new CustomException("You are not assigned to teach this subject in this section. Contact HOD.");
         }
 
         // Time-based validations
@@ -288,6 +287,7 @@ public class SessionService {
                 }
             });
             deviceVerificationService.registerPublicKey(student, request.getPublicKey());
+            deviceVerificationService.verifySignatureWithKey(request.getPublicKey(), request);
             if (actor.getRegisteredDeviceId() == null) {
                 actor.setRegisteredDeviceId(request.getDeviceId());
                 userRepository.save(actor);

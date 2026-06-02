@@ -11,16 +11,11 @@ public class DemoApplication {
 
 	public static void main(String[] args) {
 		Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-		setPropertyFromDotenvIfPresent(dotenv, "MAIL_FROM");
-		setPropertyFromDotenvIfPresent(dotenv, "RESEND_API_KEY");
+		dotenv.entries().forEach(entry -> {
+			if (System.getenv(entry.getKey()) == null) {
+				System.setProperty(entry.getKey(), entry.getValue());
+			}
+		});
 		SpringApplication.run(DemoApplication.class, args);
 	}
-
-	private static void setPropertyFromDotenvIfPresent(Dotenv dotenv, String key) {
-		String value = dotenv.get(key);
-		if (value != null && !value.isBlank() && System.getenv(key) == null) {
-			System.setProperty(key, value);
-		}
-	}
-
 }

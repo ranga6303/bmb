@@ -7,13 +7,25 @@ import com.example.demo.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
     Optional<Teacher> findByTeacherId(String teacherId);
 
     Optional<Teacher> findByUser(User user);
+
+    @Transactional(readOnly = true)
+    @Query("""
+        select distinct t
+        from Teacher t
+        left join fetch t.user
+        left join fetch t.mappedSections
+        left join fetch t.mappedSubjects
+        """)
+    List<Teacher> findAllWithMappings();
 
     @Query("SELECT COUNT(t) > 0 FROM Teacher t JOIN t.mappedSections s WHERE s = :section AND t.user.role = :role")
     boolean existsBySectionAndRole(@Param("section") Section section, @Param("role") Role role);

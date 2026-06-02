@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.exception.CustomException;
+import com.example.demo.exception.ServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
@@ -44,7 +44,7 @@ public class SmtpEmailService implements EmailService {
             logger.info("Email accepted by SMTP server to={} subject={}", to, subject);
         } catch (Exception e) {
             logger.error("Failed to send email to {}", to, e);
-            throw new CustomException("Failed to send email. Please try again later.", e);
+            throw new ServiceUnavailableException("Failed to send email. Please try again later.", e);
         }
     }
 }

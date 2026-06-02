@@ -28,7 +28,6 @@ public enum Role {
         Permission.ASSIGN_TEACHER_SECTION,
         Permission.ASSIGN_CLASS_TEACHER
     )),
-    DATA_ENTERER(EnumSet.of(Permission.MANAGE_PRELOADED_DATA)),
     ADMIN(EnumSet.allOf(Permission.class));
 
     private final Set<Permission> permissions;
