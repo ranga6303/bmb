@@ -1,24 +1,19 @@
 package com.example.demo.service;
 
 import com.example.demo.exception.ServiceUnavailableException;
+import com.resend.Resend;
+import com.resend.services.emails.model.CreateEmailOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-
 
 public class SmtpEmailService implements EmailService {
     private static final Logger logger = LoggerFactory.getLogger(SmtpEmailService.class);
 
-    private final JavaMailSender mailSender;
-    private final String mailHost;
-    private final String mailUsername;
+    private final String apiKey;
     private final String fromAddress;
 
-    public SmtpEmailService(JavaMailSender mailSender, String mailHost, String mailUsername, String fromAddress) {
-        this.mailSender = mailSender;
-        this.mailHost = mailHost;
-        this.mailUsername = mailUsername;
+    public SmtpEmailService(String apiKey, String fromAddress) {
+        this.apiKey = apiKey;
         this.fromAddress = fromAddress;
     }
 
@@ -33,17 +28,18 @@ public class SmtpEmailService implements EmailService {
     }
 
     private void send(String to, String subject, String body) {
-        logger.info("Sending email using host={}, username={}, fromAddress={}", mailHost, mailUsername, fromAddress);
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
         try {
-            mailSender.send(message);
-            logger.info("Email accepted by SMTP server to={} subject={}", to, subject);
+            Resend resend = new Resend(apiKey);
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(fromAddress)
+                    .to(to)
+                    .subject(subject)
+                    .text(body)
+                    .build();
+            resend.emails().send(params);
+            logger.info("Email sent via Resend API to={}", to);
         } catch (Exception e) {
-            logger.error("Failed to send email to {}", to, e);
+            logger.error("Failed to send email via Resend to {}", to, e);
             throw new ServiceUnavailableException("Failed to send email. Please try again later.", e);
         }
     }
