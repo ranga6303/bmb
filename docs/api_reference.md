@@ -33,6 +33,16 @@ Requires `VIEW_OWN_ATTENDANCE`.
 - `POST /student/device-change-request`
 - `GET /student/device-change-requests`
 
+`POST /student/device-change-request` request body:
+
+- `newDeviceId` (required)
+- `reason` (optional but required for eventual admin approval)
+
+`GET /student/device-change-requests` response includes:
+
+- `id`, `oldDeviceId`, `newDeviceId`
+- `reason`, `status`, `requestedAt`, `adminRemarks`
+
 ## Sessions (`/sessions`)
 
 - `POST /sessions` (`CREATE_SESSION`)
@@ -86,6 +96,16 @@ All active routes require `MANAGE_USERS`.
 - `POST /admin/device-change-requests/{id}/approve`
 - `POST /admin/device-change-requests/{id}/reject`
 
+`GET /admin/device-change-requests` response includes conflict context:
+
+- `conflictByDevice` (owner details when `newDeviceId` is currently active on another user)
+
+`POST /admin/device-change-requests/{id}/approve` current validation:
+
+- Request must be `PENDING`
+- Request must contain a non-empty `reason`
+- Approval is rejected when `newDeviceId` is currently active for another user
+
 ## Reports
 
 - `GET /sections/{id}/attendance?subjectId=` (`VIEW_SECTION_ATTENDANCE`)
@@ -96,6 +116,8 @@ All active routes require `MANAGE_USERS`.
 - `GET /health` (public, plain text)
 - `GET /greet` (authenticated)
 - `GET /test-password` (`ROLE_ADMIN`, diagnostic)
+
+Note: `/` is currently permitted by security config but has no controller mapping.
 
 ## Disabled/Commented Endpoints
 

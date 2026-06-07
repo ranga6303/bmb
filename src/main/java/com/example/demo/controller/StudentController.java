@@ -79,15 +79,17 @@ public class StudentController {
     @GetMapping("/device-change-requests")
     public ResponseEntity<List<Map<String, Object>>> getMyDeviceChangeRequests() {
         List<DeviceChangeRequest> requests = deviceChangeService.getMyRequests(currentUserService.getCurrentUser());
-        List<Map<String, Object>> response = requests.stream().map(r -> Map.<String, Object>of(
-            "id", r.getId(),
-            "oldDeviceId", r.getOldDeviceId(),
-            "newDeviceId", r.getNewDeviceId(),
-            "reason", r.getReason() != null ? r.getReason() : "",
-            "status", r.getStatus().name(),
-            "requestedAt", r.getRequestedAt().toString(),
-            "adminRemarks", r.getAdminRemarks() != null ? r.getAdminRemarks() : ""
-        )).collect(Collectors.toList());
+        List<Map<String, Object>> response = requests.stream().map(r -> {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", r.getId());
+            row.put("oldDeviceId", r.getOldDeviceId());
+            row.put("newDeviceId", r.getNewDeviceId());
+            row.put("reason", r.getReason() != null ? r.getReason() : "");
+            row.put("status", r.getStatus().name());
+            row.put("requestedAt", r.getRequestedAt().toString());
+            row.put("adminRemarks", r.getAdminRemarks() != null ? r.getAdminRemarks() : "");
+            return row;
+        }).collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 }

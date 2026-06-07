@@ -26,7 +26,12 @@ public enum Role {
         Permission.VIEW_DEPARTMENT_ANALYTICS,
         Permission.VIEW_SECTION_ATTENDANCE,
         Permission.ASSIGN_TEACHER_SECTION,
-        Permission.ASSIGN_CLASS_TEACHER
+        Permission.ASSIGN_CLASS_TEACHER,
+        Permission.CREATE_SESSION,
+        Permission.LOCK_SESSION,
+        Permission.APPROVE_SESSION,
+        Permission.CANCEL_SESSION,
+        Permission.MANUAL_MARK_ATTENDANCE
     )),
     ADMIN(EnumSet.allOf(Permission.class));
 

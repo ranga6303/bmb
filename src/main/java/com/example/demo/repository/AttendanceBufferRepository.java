@@ -10,8 +10,6 @@ import java.util.List;
 public interface AttendanceBufferRepository extends JpaRepository<AttendanceBuffer, Long> {
     boolean existsBySessionAndStudent(Session session, Student student);
 
-    boolean existsBySessionAndAndroidId(Session session, String androidId);
-
     List<AttendanceBuffer> findBySession(Session session);
 
     void deleteBySession(Session session);

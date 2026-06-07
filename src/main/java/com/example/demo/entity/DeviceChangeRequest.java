@@ -32,7 +32,7 @@ public class DeviceChangeRequest {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String oldDeviceId;
 
     @Column(nullable = false, length = 255)

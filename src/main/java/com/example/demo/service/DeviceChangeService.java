@@ -38,13 +38,12 @@ public class DeviceChangeService {
 
     @Transactional
     public MessageResponse submitRequest(User actor, DeviceChangeRequestDto dto) {
-        if (actor.getRegisteredDeviceId() == null) {
-            throw new CustomException("No device is currently registered. Attend your first session to register a device.");
+        String newDeviceId = dto.getNewDeviceId() != null ? dto.getNewDeviceId().trim() : null;
+        if (newDeviceId == null || newDeviceId.isEmpty()) {
+            throw new CustomException("New device ID is required.");
         }
 
-        if (actor.getRegisteredDeviceId().equals(dto.getNewDeviceId())) {
-            throw new CustomException("New device ID is the same as the currently registered device.");
-        }
+        String currentDeviceId = actor.getRegisteredDeviceId() != null ? actor.getRegisteredDeviceId().trim() : null;
 
         if (deviceChangeRequestRepository.existsByUserAndStatus(actor, DeviceChangeStatus.PENDING)) {
             throw new CustomException("You already have a pending device change request.");
@@ -52,8 +51,8 @@ public class DeviceChangeService {
 
         DeviceChangeRequest request = new DeviceChangeRequest();
         request.setUser(actor);
-        request.setOldDeviceId(actor.getRegisteredDeviceId());
-        request.setNewDeviceId(dto.getNewDeviceId());
+        request.setOldDeviceId(currentDeviceId);
+        request.setNewDeviceId(newDeviceId);
         request.setReason(dto.getReason());
         request.setStatus(DeviceChangeStatus.PENDING);
         request.setRequestedAt(LocalDateTime.now());
@@ -80,7 +79,6 @@ public class DeviceChangeService {
         if (request.getStatus() != DeviceChangeStatus.PENDING) {
             throw new CustomException("Only PENDING requests can be approved.");
         }
-
         User user = request.getUser();
 
         // Reset device binding

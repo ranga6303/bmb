@@ -221,7 +221,7 @@ The active checks require:
 
 Successful student attendance writes `AttendanceBuffer` with `MarkType.AUTO`. Final `Attendance` rows are not created until session approval.
 
-Android-ID blocking/proxy-detection logic is commented out and inactive. The DTO still accepts `androidId`, and entities still have Android-ID/block fields.
+Android-ID fields and logic have been removed.
 
 ### Session Approval
 

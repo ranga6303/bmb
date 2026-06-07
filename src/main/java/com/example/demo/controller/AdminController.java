@@ -10,6 +10,7 @@ import com.example.demo.entity.Teacher;
 import com.example.demo.entity.User;
 import com.example.demo.exception.CustomException;
 import com.example.demo.repository.SectionRepository;
+import com.example.demo.repository.StudentRepository;
 import com.example.demo.repository.SubjectRepository;
 import com.example.demo.repository.TeacherRepository;
 import com.example.demo.repository.UserRepository;
@@ -43,6 +44,7 @@ public class AdminController {
     private final CurrentUserService currentUserService;
     private final UserRepository userRepository;
     private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
     private final SectionRepository sectionRepository;
     private final SubjectRepository subjectRepository;
 
@@ -52,6 +54,7 @@ public class AdminController {
         CurrentUserService currentUserService,
         UserRepository userRepository,
         TeacherRepository teacherRepository,
+        StudentRepository studentRepository,
         SectionRepository sectionRepository,
         SubjectRepository subjectRepository
     ) {
@@ -60,6 +63,7 @@ public class AdminController {
         this.currentUserService = currentUserService;
         this.userRepository = userRepository;
         this.teacherRepository = teacherRepository;
+        this.studentRepository = studentRepository;
         this.sectionRepository = sectionRepository;
         this.subjectRepository = subjectRepository;
     }
@@ -171,11 +175,7 @@ public class AdminController {
         return ResponseEntity.ok(new MessageResponse("Subject removed from section."));
     }
 
-    // DISABLED: Android ID based blocking system commented out.
-    // Reason: Cannot distinguish between legitimate reinstall and proxy attack
-    // using same Android ID. Physical teacher verification is the intended
-    // solution for device reset scenarios. Re-enable when proper
-    // verification flow is implemented.
+    // DISABLED: previously had Android-ID based blocking system.
     /*
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
     @GetMapping("/blocked-students")
@@ -187,8 +187,6 @@ public class AdminController {
             map.put("username", u.getUsername());
             map.put("blockReason", u.getBlockReason());
             map.put("blockedAt", u.getBlockedAt() != null ? u.getBlockedAt().toString() : null);
-            map.put("currentAndroidId", u.getCurrentAndroidId());
-            map.put("previousAndroidId", u.getPreviousAndroidId());
             return map;
         }).collect(Collectors.toList());
         return ResponseEntity.ok(response);
@@ -211,15 +209,18 @@ public class AdminController {
     @GetMapping("/device-change-requests")
     public ResponseEntity<List<Map<String, Object>>> getPendingDeviceChanges() {
         List<DeviceChangeRequest> requests = deviceChangeService.getPendingRequests();
-        List<Map<String, Object>> response = requests.stream().map(r -> Map.<String, Object>of(
-            "id", r.getId(),
-            "userId", r.getUser().getId(),
-            "username", r.getUser().getUsername(),
-            "oldDeviceId", r.getOldDeviceId(),
-            "newDeviceId", r.getNewDeviceId(),
-            "reason", r.getReason() != null ? r.getReason() : "",
-            "requestedAt", r.getRequestedAt().toString()
-        )).collect(Collectors.toList());
+        List<Map<String, Object>> response = requests.stream().map(r -> {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", r.getId());
+            row.put("userId", r.getUser().getId());
+            row.put("username", r.getUser().getUsername());
+            row.put("oldDeviceId", r.getOldDeviceId());
+            row.put("newDeviceId", r.getNewDeviceId());
+            row.put("reason", r.getReason() != null ? r.getReason() : "");
+            row.put("requestedAt", r.getRequestedAt().toString());
+            row.put("conflictByDevice", resolveDeviceConflictOwner(r));
+            return row;
+        }).collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 
@@ -271,5 +272,26 @@ public class AdminController {
     private boolean containsSubject(Teacher teacher, Subject subject) {
         return teacher.getMappedSubjects().stream()
             .anyMatch(mappedSubject -> mappedSubject.getId().equals(subject.getId()));
+    }
+
+    private Map<String, Object> resolveDeviceConflictOwner(DeviceChangeRequest request) {
+        User requestUser = request.getUser();
+        return userRepository.findByRegisteredDeviceId(request.getNewDeviceId())
+            .filter(owner -> !owner.getId().equals(requestUser.getId()))
+            .map(this::toConflictOwner)
+            .orElse(null);
+    }
+
+
+    private Map<String, Object> toConflictOwner(User owner) {
+        Map<String, Object> conflict = new HashMap<>();
+        conflict.put("userId", owner.getId());
+        conflict.put("username", owner.getUsername());
+        conflict.put("registeredDeviceId", owner.getRegisteredDeviceId());
+        studentRepository.findByUser(owner).ifPresent(student -> {
+            conflict.put("studentId", student.getStudentId());
+            conflict.put("studentName", student.getName());
+        });
+        return conflict;
     }
 }

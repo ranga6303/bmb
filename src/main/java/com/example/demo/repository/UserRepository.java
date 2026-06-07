@@ -13,10 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByRegisteredDeviceId(String registeredDeviceId);
 
-    List<User> findByCurrentAndroidId(String androidId);
-
-    List<User> findByPreviousAndroidId(String androidId);
-
     List<User> findByBlocked(boolean blocked);
 
     boolean existsByUsername(String username);

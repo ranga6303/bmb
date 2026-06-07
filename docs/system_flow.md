@@ -232,8 +232,7 @@ Buffer write:
 
 Inactive code notes:
 
-- Android-ID blocking/proxy-detection logic is commented out and inactive.
-- The DTO still accepts `androidId`, and entities/repositories still contain Android-ID fields/methods, but active attendance marking does not store the request Android ID in `AttendanceBuffer`.
+- Android-ID fields and logic have been removed.
 
 ## 7. Manual Attendance Flow
 

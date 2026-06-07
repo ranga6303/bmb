@@ -2,7 +2,6 @@ package com.example.demo.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 public class MarkAttendanceRequest {
     @NotBlank
@@ -15,13 +14,8 @@ public class MarkAttendanceRequest {
     @NotBlank
     private String deviceId;
 
-    @Size(max = 100)
-    private String androidId;
-
-    @NotBlank
     private String deviceSignature;
 
-    @NotBlank
     private String signedPayload;
 
     private String publicKey;
@@ -50,14 +44,6 @@ public class MarkAttendanceRequest {
         this.deviceId = deviceId;
     }
 
-    public String getAndroidId() {
-        return androidId;
-    }
-
-    public void setAndroidId(String androidId) {
-        this.androidId = androidId;
-    }
-
     public String getDeviceSignature() {
         return deviceSignature;
     }
@@ -82,3 +68,4 @@ public class MarkAttendanceRequest {
         this.publicKey = publicKey;
     }
 }
+

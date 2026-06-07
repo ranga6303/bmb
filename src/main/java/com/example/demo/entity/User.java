@@ -59,12 +59,6 @@ public class User {
     @Column(length = 255)
     private String registeredDeviceId;
 
-    @Column(name = "current_android_id")
-    private String currentAndroidId;
-
-    @Column(name = "previous_android_id")
-    private String previousAndroidId;
-
     @Column(name = "is_blocked", nullable = false)
     private boolean blocked = false;
 
@@ -166,22 +160,6 @@ public class User {
 
     public void setRegisteredDeviceId(String registeredDeviceId) {
         this.registeredDeviceId = registeredDeviceId;
-    }
-
-    public String getCurrentAndroidId() {
-        return currentAndroidId;
-    }
-
-    public void setCurrentAndroidId(String currentAndroidId) {
-        this.currentAndroidId = currentAndroidId;
-    }
-
-    public String getPreviousAndroidId() {
-        return previousAndroidId;
-    }
-
-    public void setPreviousAndroidId(String previousAndroidId) {
-        this.previousAndroidId = previousAndroidId;
     }
 
     public boolean isBlocked() {

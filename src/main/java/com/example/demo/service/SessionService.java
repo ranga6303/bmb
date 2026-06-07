@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.ActiveSessionResponse;
 import com.example.demo.dto.MarkAttendanceRequest;
+import com.example.demo.dto.DeviceChangeRequestDto;
 import com.example.demo.dto.SectionAttendanceReport;
 import com.example.demo.dto.StudentAttendanceSummary;
 import com.example.demo.dto.StudentOwnAttendanceReport;
@@ -55,6 +56,7 @@ public class SessionService {
     private final RoomService roomService;
     private final DeviceVerificationService deviceVerificationService;
     private final TeacherSectionSubjectRepository teacherSectionSubjectRepository;
+    private final DeviceChangeService deviceChangeService;
 
     public SessionService(
         TeacherRepository teacherRepository,
@@ -68,7 +70,8 @@ public class SessionService {
         UserRepository userRepository,
         RoomService roomService,
         DeviceVerificationService deviceVerificationService,
-        TeacherSectionSubjectRepository teacherSectionSubjectRepository
+        TeacherSectionSubjectRepository teacherSectionSubjectRepository,
+        DeviceChangeService deviceChangeService
     ) {
         this.teacherRepository = teacherRepository;
         this.subjectRepository = subjectRepository;
@@ -82,6 +85,7 @@ public class SessionService {
         this.roomService = roomService;
         this.deviceVerificationService = deviceVerificationService;
         this.teacherSectionSubjectRepository = teacherSectionSubjectRepository;
+        this.deviceChangeService = deviceChangeService;
     }
 
     @Transactional
@@ -206,102 +210,7 @@ public class SessionService {
             throw new CustomException("Beacon UUID does not match the classroom. Are you physically present?");
         }
 
-        // DISABLED: Android ID based blocking system commented out.
-        // Reason: Cannot distinguish between legitimate reinstall and proxy attack
-        // using same Android ID. Physical teacher verification is the intended
-        // solution for device reset scenarios. Re-enable when proper
-        // verification flow is implemented.
-        /*
-        // Check if student is blocked
-        if (actor.isBlocked()) {
-            throw new CustomException("Your account is blocked. Reason: " + actor.getBlockReason() + ". Please contact admin.");
-        }
-
-        // Android ID checks
-        if (request.getAndroidId() != null) {
-
-            // Check 1: Same androidId already registered to another student -> just reject
-            List<User> sameCurrentAndroid = userRepository.findByCurrentAndroidId(request.getAndroidId());
-            for (User otherUser : sameCurrentAndroid) {
-                if (!otherUser.getId().equals(actor.getId())) {
-                    throw new CustomException(
-                        "This device is already registered to another student. Please use your own device.");
-                }
-            }
-
-            // Check 2: Same androidId was previously used by another student -> just reject
-            List<User> samePreviousAndroid = userRepository.findByPreviousAndroidId(request.getAndroidId());
-            for (User otherUser : samePreviousAndroid) {
-                if (!otherUser.getId().equals(actor.getId())) {
-                    throw new CustomException(
-                        "This device was previously registered to another student. Please contact admin.");
-                }
-            }
-
-            // Check 3: Same androidId marking attendance in SAME SESSION -> proxy detected -> block both
-            boolean proxyDetected = attendanceBufferRepository.existsBySessionAndAndroidId(
-                session, request.getAndroidId());
-            if (proxyDetected) {
-                actor.setBlocked(true);
-                actor.setBlockReason("Proxy attendance detected in session " + session.getId());
-                actor.setBlockedAt(LocalDateTime.now());
-                userRepository.save(actor);
-
-                // Find and block the other student who marked with same androidId
-                userRepository.findByCurrentAndroidId(request.getAndroidId()).forEach(otherUser -> {
-                    if (!otherUser.getId().equals(actor.getId())) {
-                        otherUser.setBlocked(true);
-                        otherUser.setBlockReason("Device shared during attendance in session " + session.getId());
-                        otherUser.setBlockedAt(LocalDateTime.now());
-                        userRepository.save(otherUser);
-                    }
-                });
-
-                throw new CustomException("Proxy attendance detected. You have been blocked. Please contact admin.");
-            }
-
-            // Update android IDs
-            if (actor.getCurrentAndroidId() != null &&
-                !actor.getCurrentAndroidId().equals(request.getAndroidId())) {
-                actor.setPreviousAndroidId(actor.getCurrentAndroidId());
-            }
-            actor.setCurrentAndroidId(request.getAndroidId());
-            userRepository.save(actor);
-        }
-        */
-
-        // Prevent two students sharing same device
-        if (request.getDeviceId() != null && actor.getRegisteredDeviceId() == null) {
-            Optional<User> existingUser = userRepository.findByRegisteredDeviceId(request.getDeviceId());
-            if (existingUser.isPresent() && !existingUser.get().getId().equals(actor.getId())) {
-                throw new CustomException(
-                    "This device is already registered to another student account. Each student must use their own device.");
-            }
-        }
-
-        if (student.getPublicKey() == null && request.getPublicKey() != null) {
-            // Check if public key already registered to another student
-            studentRepository.findByPublicKey(request.getPublicKey()).ifPresent(existingStudent -> {
-                if (!existingStudent.getId().equals(student.getId())) {
-                    throw new CustomException("This device is already registered to another student. Please use your own device.");
-                }
-            });
-            deviceVerificationService.registerPublicKey(student, request.getPublicKey());
-            deviceVerificationService.verifySignatureWithKey(request.getPublicKey(), request);
-            if (actor.getRegisteredDeviceId() == null) {
-                actor.setRegisteredDeviceId(request.getDeviceId());
-                userRepository.save(actor);
-            }
-            studentRepository.save(student);
-        } else if (student.getPublicKey() != null) {
-            if (actor.getRegisteredDeviceId() != null && request.getDeviceId() != null
-                && !actor.getRegisteredDeviceId().equals(request.getDeviceId())) {
-                throw new CustomException("Device mismatch. Contact admin to reset device binding.");
-            }
-            deviceVerificationService.verifySignature(student, request);
-        } else {
-            throw new CustomException("First attendance requires a public key for device binding.");
-        }
+        handleDeviceBinding(actor, student, request);
 
         if (attendanceBufferRepository.existsBySessionAndStudent(session, student)) {
             throw new CustomException("Attendance already marked for this session.");
@@ -311,12 +220,6 @@ public class SessionService {
         attendanceBuffer.setSession(session);
         attendanceBuffer.setStudent(student);
         attendanceBuffer.setMarkType(MarkType.AUTO);
-        // DISABLED: Android ID based blocking system commented out.
-        // Reason: Cannot distinguish between legitimate reinstall and proxy attack
-        // using same Android ID. Physical teacher verification is the intended
-        // solution for device reset scenarios. Re-enable when proper
-        // verification flow is implemented.
-        // attendanceBuffer.setAndroidId(request.getAndroidId());
         attendanceBufferRepository.save(attendanceBuffer);
     }
 
@@ -552,4 +455,70 @@ public class SessionService {
         log.setDetails(details);
         auditLogRepository.save(log);
     }
+
+    private void handleDeviceBinding(User actor, Student student, MarkAttendanceRequest request) {
+        String deviceId = request.getDeviceId();
+        boolean deviceAlreadyBound = actor.getRegisteredDeviceId() != null;
+
+        if (!deviceAlreadyBound) {
+            userRepository.findByRegisteredDeviceId(deviceId).ifPresent(existingUser -> {
+                if (!existingUser.getId().equals(actor.getId())) {
+                    throw new CustomException("This device is already registered to another student account.");
+                }
+            });
+            actor.setRegisteredDeviceId(deviceId);
+        } else if (!actor.getRegisteredDeviceId().equals(deviceId)) {
+            throw new CustomException("Device mismatch. Contact admin to reset device binding.");
+        }
+
+        if (hasText(request.getPublicKey())) {
+            studentRepository.findByPublicKey(request.getPublicKey()).ifPresent(existingStudent -> {
+                if (!existingStudent.getId().equals(student.getId())) {
+                    throw new CustomException("This device is already registered to another student. Please use your own device.");
+                }
+            });
+            validateSignedPayload(request);
+            deviceVerificationService.registerPublicKey(student, request.getPublicKey());
+            deviceVerificationService.verifySignatureWithKey(request.getPublicKey(), request);
+            studentRepository.save(student);
+        } else if (student.getPublicKey() != null) {
+            validateSignedPayload(request);
+            deviceVerificationService.verifySignature(student, request);
+        }
+
+        userRepository.save(actor);
+    }
+
+    private void validateSignedPayload(MarkAttendanceRequest request) {
+        if (!hasText(request.getSignedPayload()) || !hasText(request.getDeviceSignature())) {
+            throw new CustomException("Signed payload and device signature are required for device verification.");
+        }
+
+        String[] parts = request.getSignedPayload().split(":", -1);
+        if (parts.length != 4
+            || !parts[0].equals(request.getSessionCode())
+            || !parts[1].equals(request.getBeaconUuid())
+            || !parts[2].equals(request.getDeviceId())
+            || !hasText(parts[3])) {
+            throw new CustomException("Invalid signed payload format.");
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+    private void ensureDeviceChangeRequestExists(User actor, MarkAttendanceRequest request, String reason) {
+        DeviceChangeRequestDto dto = new DeviceChangeRequestDto();
+        dto.setNewDeviceId(request.getDeviceId());
+        dto.setReason(reason);
+
+        try {
+            deviceChangeService.submitRequest(actor, dto);
+        } catch (CustomException ex) {
+            if (!"You already have a pending device change request.".equals(ex.getMessage())) {
+                throw ex;
+            }
+        }
+    }
 }
+

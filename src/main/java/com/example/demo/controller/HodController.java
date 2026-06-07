@@ -83,10 +83,11 @@ public class HodController {
     @GetMapping("/department/report")
     public ResponseEntity<Map<String, Object>> departmentReport() {
         Teacher teacher = currentUserService.getCurrentTeacher();
-        if (teacher.getMappedSections().isEmpty()) {
+        List<TeacherSectionSubject> assignments = teacherSectionSubjectRepository.findByTeacher(teacher);
+        if (assignments.isEmpty()) {
             throw new CustomException("HOD has no mapped sections");
         }
-        String name = teacher.getMappedSections().iterator().next().getDepartmentName();
+        String name = assignments.get(0).getSection().getDepartmentName();
 
         List<Section> sections = sectionRepository.findByDepartmentName(name);
         long totalSections = sections.size();
@@ -148,6 +149,32 @@ public class HodController {
     }
 
     @PreAuthorize("hasAuthority('ASSIGN_TEACHER_SECTION')")
+    @GetMapping("/sections")
+    public ResponseEntity<List<Map<String, Object>>> getSectionsWithMappedSubjects() {
+        String departmentName = getCurrentHodDepartmentName();
+        List<Map<String, Object>> response = sectionRepository.findByDepartmentName(departmentName).stream()
+            .map(section -> {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("sectionId", section.getId());
+                row.put("sectionName", section.getName());
+                row.put("departmentName", section.getDepartmentName());
+                row.put("assignedSubjects", getMappedSubjectsForSection(section));
+                return row;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAuthority('ASSIGN_TEACHER_SECTION')")
+    @GetMapping("/sections/{sectionId}/subjects")
+    public ResponseEntity<List<Map<String, Object>>> getMappedSubjectsForSection(@PathVariable Long sectionId) {
+        Section section = sectionRepository.findById(sectionId)
+            .orElseThrow(() -> new CustomException("Section not found"));
+        ensureSectionBelongsToCurrentHodDepartment(section);
+        return ResponseEntity.ok(getMappedSubjectsForSection(section));
+    }
+
+    @PreAuthorize("hasAuthority('ASSIGN_TEACHER_SECTION')")
     @PostMapping("/teachers/{teacherId}/assign-section-subject")
     public ResponseEntity<MessageResponse> assignTeacherSectionSubject(
         @PathVariable String teacherId,
@@ -160,6 +187,7 @@ public class HodController {
             .orElseThrow(() -> new CustomException("Section not found"));
         Subject subject = subjectRepository.findById(subjectId)
             .orElseThrow(() -> new CustomException("Subject not found"));
+        ensureSectionBelongsToCurrentHodDepartment(section);
 
         if (teacherSectionSubjectRepository.existsByTeacherAndSectionAndSubject(teacher, section, subject)) {
             throw new CustomException("Assignment already exists.");
@@ -197,6 +225,7 @@ public class HodController {
             .orElseThrow(() -> new CustomException("Section not found"));
         Subject subject = subjectRepository.findById(subjectId)
             .orElseThrow(() -> new CustomException("Subject not found"));
+        ensureSectionBelongsToCurrentHodDepartment(section);
 
         if (!teacherSectionSubjectRepository.existsByTeacherAndSectionAndSubject(teacher, section, subject)) {
             throw new CustomException("Assignment does not exist.");
@@ -217,6 +246,7 @@ public class HodController {
         }
         Section section = sectionRepository.findById(sectionId)
             .orElseThrow(() -> new CustomException("Section not found"));
+        ensureSectionBelongsToCurrentHodDepartment(section);
         if (teacherRepository.existsBySectionAndRole(section, Role.CLASS_TEACHER)) {
             throw new CustomException("Section already has a class teacher assigned.");
         }
@@ -247,7 +277,9 @@ public class HodController {
         response.put("name", teacher.getName());
         response.put("email", teacher.getEmail());
         response.put("role", teacher.getUser() != null ? teacher.getUser().getRole().name() : "NOT_REGISTERED");
-        response.put("mappedSections", teacher.getMappedSections().stream()
+        response.put("mappedSections", teacherSectionSubjectRepository.findByTeacher(teacher).stream()
+            .map(TeacherSectionSubject::getSection)
+            .distinct()
             .map(section -> Map.<String, Object>of(
                 "sectionId", section.getId(),
                 "sectionName", section.getName()
@@ -267,5 +299,30 @@ public class HodController {
     private boolean containsSection(Subject subject, Section section) {
         return subject.getMappedSections().stream()
             .anyMatch(mappedSection -> mappedSection.getId().equals(section.getId()));
+    }
+
+    private String getCurrentHodDepartmentName() {
+        Teacher teacher = currentUserService.getCurrentTeacher();
+        List<TeacherSectionSubject> assignments = teacherSectionSubjectRepository.findByTeacher(teacher);
+        if (assignments.isEmpty()) {
+            throw new CustomException("HOD has no mapped sections");
+        }
+        return assignments.get(0).getSection().getDepartmentName();
+    }
+
+    private void ensureSectionBelongsToCurrentHodDepartment(Section section) {
+        String departmentName = getCurrentHodDepartmentName();
+        if (!departmentName.equals(section.getDepartmentName())) {
+            throw new CustomException("Section does not belong to your department");
+        }
+    }
+
+    private List<Map<String, Object>> getMappedSubjectsForSection(Section section) {
+        return subjectRepository.findByMappedSectionsContaining(section).stream()
+            .map(subject -> Map.<String, Object>of(
+                "subjectId", subject.getId(),
+                "subjectName", subject.getName()
+            ))
+            .collect(Collectors.toList());
     }
 }

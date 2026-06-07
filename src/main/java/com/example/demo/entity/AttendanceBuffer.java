@@ -47,9 +47,6 @@ public class AttendanceBuffer {
     @Column(nullable = false)
     private MarkType markType;
 
-    @Column(name = "android_id")
-    private String androidId;
-
     @PrePersist
     public void prePersist() {
         if (markedAt == null) {
@@ -103,13 +100,5 @@ public class AttendanceBuffer {
 
     public void setMarkType(MarkType markType) {
         this.markType = markType;
-    }
-
-    public String getAndroidId() {
-        return androidId;
-    }
-
-    public void setAndroidId(String androidId) {
-        this.androidId = androidId;
     }
 }

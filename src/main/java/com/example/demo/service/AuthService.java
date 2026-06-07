@@ -179,6 +179,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setEnabled(true);
         user.setEmailVerified(true);
+        user.setRegisteredDeviceId(null);
 
         if (teacherOpt.isPresent()) {
             Teacher teacher = teacherOpt.get();
@@ -253,7 +254,7 @@ public class AuthService {
 
         UserSession userSession = new UserSession();
         userSession.setUser(user);
-        userSession.setDeviceId(request.getDeviceId());
+        userSession.setDeviceId(user.getRegisteredDeviceId());
         userSession.setRefreshTokenHash(refreshHash);
         userSession.setIpAddress(httpRequest.getRemoteAddr());
         userSession.setUserAgent(httpRequest.getHeader("User-Agent"));
@@ -272,7 +273,7 @@ public class AuthService {
             user.getId(),
             user.getRole().name(),
             userSession.getId(),
-            userSession.getDeviceId()
+            user.getRegisteredDeviceId()
         );
 
         persistAuditAfterCommit("LOGIN_SUCCESS", user, "User", user.getId(), "Login successful");
@@ -405,7 +406,7 @@ public class AuthService {
 
         UserSession newSession = new UserSession();
         newSession.setUser(user);
-        newSession.setDeviceId(oldSession.getDeviceId());
+        newSession.setDeviceId(user.getRegisteredDeviceId());
         newSession.setRefreshTokenHash(newRefreshHash);
         newSession.setIpAddress(request.getRemoteAddr());
         newSession.setUserAgent(request.getHeader("User-Agent"));
@@ -424,7 +425,7 @@ public class AuthService {
             user.getId(),
             user.getRole().name(),
             newSession.getId(),
-            newSession.getDeviceId()
+            user.getRegisteredDeviceId()
         );
 
         return new AuthResponse(accessToken, newRawRefresh);
@@ -509,3 +510,4 @@ public class AuthService {
         return localPart.substring(0, 2) + "***@" + domain;
     }
 }
+
