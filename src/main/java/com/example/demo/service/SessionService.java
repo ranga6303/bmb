@@ -228,6 +228,11 @@ public class SessionService {
         Session session = sessionRepository.findById(sessionId)
             .orElseThrow(() -> new CustomException("Session not found"));
         validateNotTerminal(session);
+        Teacher teacher = teacherRepository.findByUser(actor)
+            .orElseThrow(() -> new CustomException("Teacher profile not found"));
+        if (!session.getTeacher().getId().equals(teacher.getId())) {
+            throw new CustomException("Only owning teacher can lock this session.");
+        }
         if (session.getStatus() != SessionStatus.ACTIVE) {
             throw new CustomException("Only ACTIVE sessions can be locked.");
         }
@@ -278,6 +283,11 @@ public class SessionService {
         Session session = sessionRepository.findById(sessionId)
             .orElseThrow(() -> new CustomException("Session not found"));
         validateNotTerminal(session);
+        Teacher teacher = teacherRepository.findByUser(actor)
+            .orElseThrow(() -> new CustomException("Teacher profile not found"));
+        if (!session.getTeacher().getId().equals(teacher.getId())) {
+            throw new CustomException("Only owning teacher can cancel this session.");
+        }
         if (session.getStatus() != SessionStatus.LOCKED) {
             throw new CustomException("Only LOCKED sessions can be cancelled.");
         }

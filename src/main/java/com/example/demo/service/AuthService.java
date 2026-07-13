@@ -343,6 +343,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setLastPasswordChange(LocalDateTime.now());
         userRepository.save(user);
+        revokeAllSessions(user);
 
         token.setUsed(true);
         passwordResetTokenRepository.save(token);

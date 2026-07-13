@@ -80,6 +80,11 @@ public class DeviceChangeService {
             throw new CustomException("Only PENDING requests can be approved.");
         }
         User user = request.getUser();
+        userRepository.findByRegisteredDeviceId(request.getNewDeviceId())
+            .filter(existingUser -> !existingUser.getId().equals(user.getId()))
+            .ifPresent(existingUser -> {
+                throw new CustomException("This device is already registered to another user.");
+            });
 
         // Reset device binding
         user.setRegisteredDeviceId(request.getNewDeviceId());
